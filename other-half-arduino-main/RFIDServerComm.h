@@ -111,7 +111,7 @@ class RFIDServerComm {
       // Three msg types supported TAG_RESPONSE, SHOW_LEDS and HEARTBEAT
       if (read_buf[0] == TAG_RESPONSE_MSG) {
         mission_command = read_buf[1];
-        mission = read_buf[2];
+        power = read_buf[2];
         return TAG_RESPONSE_MSG;
       }
       else if (read_buf[0] == SHOW_LEDS_MSG) {

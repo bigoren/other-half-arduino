@@ -65,25 +65,20 @@ byte new_state = 0;
 
 unsigned long winTime = 0;
 const int winLengthMs = 5000;
- byte power_mask = 0xFC; // for encoding color power 0x00, 0x01, 0x02, 0x03
+byte power_mask = 0xF8; // for encoding color power 0x01, 0x02, 0x03, 0x04, 0x05
 // byte power_mask = 0xF3; // for encoding pattern power 0x00, 0x04, 0x08, 0x0C
-//byte power_mask = 0xCF; // for encoding motion power 0x00, 0x10, 0x20, 0x30
-// byte power = 0x00;
-// byte power = 0x01;
-// byte power = 0x02;
- byte power = 0x03;
-// byte power = 0x04;
-// byte power = 0x08;
-// byte power = 0x0C;
-// byte power = 0x10;
-// byte power = 0x20;
-//byte power = 0x30;
+// byte power_mask = 0xCF; // for encoding motion power 0x00, 0x10, 0x20, 0x30
+// byte power = 0x31;
+// byte power = 0x32;
+byte power = 0x33;
+// byte power = 0x34;
+// byte power = 0x35;
 byte mission = 0x00;
 byte PICC_version;
 
 unsigned int readCard[4];
 
-#include "touch-me-arduino.h"
+#include "other-half-arduino.h"
 
 void setup() {
     Serial.begin(9600); // Initialize serial communications with the PC

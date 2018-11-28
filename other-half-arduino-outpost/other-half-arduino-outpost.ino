@@ -36,8 +36,8 @@ enum LedsState { Off, Pattern, Mission };
 
 #define WIN_STATE          0x80
 #define VALID_STATE        0x40
-#define COLOR_FIELD_MASK   0x03
-#define PATTERN_FIELD_MASK 0x0C
+#define COLOR_FIELD_MASK   0x07
+// #define PATTERN_FIELD_MASK 0x0C
 #define NUMBER_FIELD_MASK  0x30
 
 #define RST_PIN         9           // Configurable, see typical pin layout above
@@ -65,19 +65,22 @@ bool read_success, write_success, auth_success;
 #define INITIAL_NUMBER 0x3
 
 byte state = INITIAL_COLOR << 0 | INITIAL_PATTERN << 2 | INITIAL_NUMBER << 4;
-LedsState master_state = Mission;
+LedsState master_state = Pattern;
 byte new_state = 0;
 
 unsigned long winTime = 0;
-const int winLengthMs = 5000;
-byte power_mask = 0xFC;
-byte power = 0x03;
+const int winLengthMs = 10000;
+byte power_mask = 0xF8;
+byte power = 0;
+byte prevPower = 0;
+byte currPower = 0;
 byte mission = 0xFF;
 byte PICC_version;
 
+unsigned int prevReadCard[4];
 unsigned int readCard[4];
 
-#include "touch-me-arduino.h"
+#include "other-half-arduino.h"
 
 void setup() {
     Serial.begin(9600); // Initialize serial communications with the PC
@@ -119,9 +122,12 @@ void loop() {
     // Select one of the cards
     if ( ! mfrc522.PICC_ReadCardSerial())
         return;
+
     // get card uid
     Serial.print("found tag with ID: ");
     for (int i = 0; i < mfrc522.uid.size; i++) {  // for size of uid.size write uid.uidByte to readCard
+      // remember previous card uid
+      prevReadCard[i] = readCard[i];
       readCard[i] = mfrc522.uid.uidByte[i];
       Serial.print(readCard[i], HEX);
     }
@@ -158,17 +164,18 @@ void loop() {
       return;
     }
 
+    prevPower = power & (~power_mask); // keeping only the color group for future comparison
+    Serial.print(F("Previous power ")); Serial.print(prevPower < 0x10 ? " 0" : " "); Serial.println(prevPower, HEX);
     // set variables according to data and prepare potential new state
     new_state = 0; // zeroing new_state so we start fresh and not have residuals from last runs
     power_mask = buffer[0];
     power = buffer[1];
+    currPower = power & (~power_mask);
+    Serial.print(F("Current power ")); Serial.print(currPower < 0x10 ? " 0" : " "); Serial.println(currPower, HEX);
     mission = buffer[2];
-    //mission_complete = buffer[3];
     Serial.print(F("Read power mask ")); Serial.print(power_mask < 0x10 ? " 0" : " "); Serial.println(power_mask, HEX);
     Serial.print(F("Read power ")); Serial.print(power < 0x10 ? " 0" : " "); Serial.println(power, HEX);
     Serial.print(F("Read mission ")); Serial.print(mission < 0x10 ? " 0" : " "); Serial.println(mission, HEX);
-    //Serial.print(F("Read mission_valid ")); Serial.print(mission_valid < 0x10 ? " 0" : " "); Serial.println(mission_valid, HEX);
-    //Serial.print(F("Read mission_complete ")); Serial.print(mission_complete < 0x10 ? " 0" : " "); Serial.println(mission_complete, HEX);
     if (power_mask < VALID_STATE) {
       Serial.println("Power mask not valid, do nothing");
       // Halt PICC
@@ -189,14 +196,15 @@ void loop() {
 
     // Handle logic cases:
     // if mission is already pre achieved, apply new_state with win state
-    // if new state achieves mission, write mission complete and then change state to win state
+    // if not the same card as previous one but same power (color group) then WIN, encode chip with win
     // new state does not achieve mission, apply new state.
     if (mission >= (WIN_STATE | VALID_STATE)) {
       Serial.println(F("mission PRE accomplished, applying state as new state with win state!"));
       state = new_state | WIN_STATE;
+      master_state = Mission;
       winTime = millis();
     }
-    else if (new_state == mission) {
+    else if (!UIDcompare(prevReadCard,readCard, 4) && (prevPower == currPower)) {
       Serial.println(F("mission ACCOMPLISHED, writing completion bit!"));
       //copy read block to write block so we only change what we meant
       for (byte i = 0; i < 16; i++) {
@@ -217,12 +225,15 @@ void loop() {
       else {
         Serial.println(F("write worked, applying new state"));
         state = new_state;
+        master_state = Mission;
         winTime = millis();
       }
     }
     else {  // mission is not acheived, no need for write, just apply changes
       Serial.println(F("mission not achieved, applying new state"));
       state = new_state;
+      master_state = Mission;
+      winTime = millis();
     }
 
     // Dump the sector data, good for debug

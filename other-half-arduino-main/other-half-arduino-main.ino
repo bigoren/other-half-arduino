@@ -49,8 +49,8 @@ enum LedsState { Off=0, Pattern=1, Mission=2 };
 
 #define WIN_STATE          0x80
 #define VALID_STATE        0x40
-#define COLOR_FIELD_MASK   0x03
-#define PATTERN_FIELD_MASK 0x0C
+#define COLOR_FIELD_MASK   0x07
+//#define PATTERN_FIELD_MASK 0x0C
 #define NUMBER_FIELD_MASK  0x30
 
 #define NO_MSG 0
@@ -86,15 +86,15 @@ byte size = sizeof(buffer);
 bool read_success, write_success, auth_success;
 
 #define INITIAL_COLOR 0x2
-#define INITIAL_PATTERN 0x2
+//#define INITIAL_PATTERN 0x2
 #define INITIAL_NUMBER 0x3
 
-byte state = INITIAL_COLOR << 0 | INITIAL_PATTERN << 2 | INITIAL_NUMBER << 4;
+byte state = INITIAL_COLOR;
 LedsState master_state = Pattern;
 byte message_type = NO_MSG;
 unsigned long winTime = 0;
-const int winLengthMs = 5000;
-byte power_mask = 0xFC;
+const int winLengthMs = 10000;
+byte power_mask = 0xF8;
 byte power = 0x03;
 byte mission = 0xFF;
 byte mission_command = 0;
@@ -104,7 +104,7 @@ byte PICC_version;
 unsigned int readCard[4];
 
 #include "RFIDServerComm.h"
-#include "touch-me-arduino.h"
+#include "other-half-arduino.h"
 
 void nameFound(const char* name, IPAddress ip);
 
@@ -239,16 +239,17 @@ void loop() {
         state = WIN_STATE;
       }
       else if (mission_command == DISPLAY_MISSION) {
-        Serial.println(F("mission valid but not complete, display it"));
+        Serial.println(F("mission valid but not complete, display power"));
         master_state = Mission;
-        state = mission;
+        state = power;
       }
       else {
-        // try to write mission to tag
+        // try to write power to tag
         for (byte i = 0; i < 16; i++) {
           dataBlock[i] = buffer[i];
         }
-        dataBlock[2] = mission;
+        dataBlock[1] = power;
+        dataBlock[2] = power;
         write_success = write_and_verify(blockAddr, dataBlock, buffer, size);
   
         rfidServerComm.handle_socket_write_status(ipAddr, write_success);
@@ -264,7 +265,7 @@ void loop() {
           else if (mission_command == NEW_MISSION) {
             Serial.println(F("display new mission"));
             master_state = Mission;
-            state = mission;
+            state = power;
           }
         }
         else {

@@ -39,16 +39,19 @@ void set_leds(byte state, LedsState master_state ) {
   }
   // after special cases state can be checked for COLOR, PATTERN and NUMBER and set leds accordingly
   switch (state & COLOR_FIELD_MASK) {
-    case 0x00 :
+    case 0x01 :
       fill_solid(ledsCHSV, NUM_LEDS, CHSV(0 * 256 / 4, 255, 255));
       break;
-    case 0x01:
+    case 0x02:
       fill_solid(ledsCHSV, NUM_LEDS, CHSV(1 * 256 / 4, 255, 255));
       break;
-    case 0x02:
+    case 0x03:
       fill_solid(ledsCHSV, NUM_LEDS, CHSV(2 * 256 / 4, 255, 255));
       break;
-    case 0x03:
+    case 0x04:
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(3 * 256 / 4, 255, 255));
+      break;
+    case 0x05:
       fill_solid(ledsCHSV, NUM_LEDS, CHSV(3 * 256 / 4, 255, 255));
       break;
   }
@@ -96,43 +99,44 @@ void set_leds(byte state, LedsState master_state ) {
 //      break;
 //  }
 
+// NO PATTERN PARAMETER IN THIS GAME
+//  switch ((state & PATTERN_FIELD_MASK) >> 2) {
+//    case 0x00 :
+//      {
+//        // Turn off even leds for dotted pattern
+//        for (byte i=0; i < NUM_LEDS/2; i++) {
+//          ledsCHSV[i*2].val = 0;
+//        }
+//      }
+//      break;
+//    case 0x01:
+//      {
+//        // Turn off first half
+//        for (byte i=0; i < RING_LEDS/2; i++) {
+//          for (byte j=0; j < RINGS; j++) {
+//            ledsCHSV[i+(j*RING_LEDS)].val = 0;
+//          }
+//        }
+//      }
+//      break;
+//    case 0x02:
+//      {
+//         // full
+//      }
+//      break;
+//    case 0x03:
+//      {
+//        // Turn off quarters
+//        for (byte j=0; j < RINGS; j++) {
+//          for (byte i=0; i < RING_LEDS/4; i++) {
+//            ledsCHSV[i+(j*RING_LEDS)].val = 0;
+//            ledsCHSV[RING_LEDS/2 + i + (j*RING_LEDS)].val = 0;
+//          }
+//        }
+//      }
+//      break;
+//  }
 
-  switch ((state & PATTERN_FIELD_MASK) >> 2) {
-    case 0x00 :
-      {
-        // Turn off even leds for dotted pattern
-        for (byte i=0; i < NUM_LEDS/2; i++) {
-          ledsCHSV[i*2].val = 0;
-        }
-      }
-      break;
-    case 0x01:
-      {
-        // Turn off first half
-        for (byte i=0; i < RING_LEDS/2; i++) {
-          for (byte j=0; j < RINGS; j++) {
-            ledsCHSV[i+(j*RING_LEDS)].val = 0;
-          }
-        }
-      }
-      break;
-    case 0x02:
-      {
-         // full
-      }
-      break;
-    case 0x03:
-      {
-        // Turn off quarters
-        for (byte j=0; j < RINGS; j++) {
-          for (byte i=0; i < RING_LEDS/4; i++) {
-            ledsCHSV[i+(j*RING_LEDS)].val = 0;
-            ledsCHSV[RING_LEDS/2 + i + (j*RING_LEDS)].val = 0;
-          }
-        }
-      }
-      break;
-  }
   // Turn off rings according to number field
   byte rings = (state & NUMBER_FIELD_MASK) >> 4;
   for (byte j=3; j > rings; j--) {
