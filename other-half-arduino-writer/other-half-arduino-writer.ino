@@ -24,17 +24,21 @@
 #include <MFRC522.h>
 #include <FastLED.h>
 
-#define NUM_LEDS 64
+#define RING_LEDS 16
+#define RINGS     4
+#define NUM_LEDS (RING_LEDS*RINGS)
 #define DATA_PIN 4
 
 // Define the array of leds
 CRGB leds[NUM_LEDS];
 
+enum LedsState { Off, Pattern, Mission };
+
 #define WIN_STATE          0x80
 #define VALID_STATE        0x40
-#define COLOR_FIELD_MASK   0x03
-#define PATTERN_FIELD_MASK 0x0C
-#define MOTION_FIELD_MASK  0x30
+#define COLOR_FIELD_MASK   0x07
+// #define PATTERN_FIELD_MASK 0x0C
+#define NUMBER_FIELD_MASK  0x30
 
 #define RST_PIN         9           // Configurable, see typical pin layout above
 #define SS_PIN          10          // Configurable, see typical pin layout above
@@ -56,11 +60,12 @@ byte buffer[18];
 byte size = sizeof(buffer);
 bool read_success, write_success, auth_success;
 
-#define INITIAL_COLOR 0x0
+#define INITIAL_COLOR 0x1
 #define INITIAL_PATTERN 0x0
-#define INITIAL_MOTION 0x0
+#define INITIAL_NUMBER 0x3
 
-byte state = INITIAL_COLOR << 0 | INITIAL_PATTERN << 2 | INITIAL_MOTION << 4;
+byte state = INITIAL_COLOR << 0 | INITIAL_PATTERN << 2 | INITIAL_NUMBER << 4;
+LedsState master_state = Pattern;
 byte new_state = 0;
 
 unsigned long winTime = 0;
@@ -68,14 +73,15 @@ const int winLengthMs = 5000;
 byte power_mask = 0xF8; // for encoding color power 0x01, 0x02, 0x03, 0x04, 0x05
 // byte power_mask = 0xF3; // for encoding pattern power 0x00, 0x04, 0x08, 0x0C
 // byte power_mask = 0xCF; // for encoding motion power 0x00, 0x10, 0x20, 0x30
-// byte power = 0x31;
+byte power = 0x31;
 // byte power = 0x32;
-byte power = 0x33;
+// byte power = 0x33;
 // byte power = 0x34;
 // byte power = 0x35;
 byte mission = 0x00;
 byte PICC_version;
 
+unsigned int prevReadCard[4];
 unsigned int readCard[4];
 
 #include "other-half-arduino.h"
@@ -112,13 +118,14 @@ void setup() {
  */
 void loop() {
     // advance leds first
-    set_leds(state);
+    set_leds(state, master_state);
     checkWinStatus();
     FastLED.show();
     FastLED.delay(20);
-
+    
     PICC_version = 0;
     PICC_version = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
+    // START RFID HANDLING
     // Look for new cards
     if ( ! mfrc522.PICC_IsNewCardPresent())
         return;
@@ -126,15 +133,18 @@ void loop() {
     // Select one of the cards
     if ( ! mfrc522.PICC_ReadCardSerial())
         return;
+
+    // get card uid
+    Serial.print("found tag with ID: ");
     for (int i = 0; i < mfrc522.uid.size; i++) {  // for size of uid.size write uid.uidByte to readCard
+      // remember previous card uid
+      prevReadCard[i] = readCard[i];
       readCard[i] = mfrc522.uid.uidByte[i];
       Serial.print(readCard[i], HEX);
     }
-
-    // Show some details of the PICC (that is: the tag/card)
-    Serial.print(F("Card UID:"));
-    dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
     Serial.println();
+    
+    // get PICC card type
     Serial.print(F("PICC type: "));
     MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
     Serial.println(mfrc522.PICC_GetTypeName(piccType));
@@ -153,7 +163,7 @@ void loop() {
       Serial.println(F("Authentication failed"));
       return;
     }
-    
+
     // read the tag to get coded information
     read_success = read_block(blockAddr, buffer, size);
     if (!read_success) {
@@ -202,29 +212,50 @@ void loop() {
     new_state = new_state | power | VALID_STATE;
     //Serial.println(new_state, HEX);
     
-    //if (new_state == mission) {
+    if (!UIDcompare(prevReadCard,readCard, 4)) {
       write_success = write_and_verify(blockAddr, dataBlock, buffer, size);
       if (!write_success) {
         Serial.println(F("write failed, keeping previous state"));
+        // Halt PICC
+        mfrc522.PICC_HaltA();
+        // Stop encryption on PCD
+        mfrc522.PCD_StopCrypto1();
+        return;
       }
       else {
         Serial.println(F("write worked, applying new state"));
         state = new_state;
+        master_state = Mission;
         winTime = millis();
+	      if (power < 0x35) {
+          power = power + 1;
+        }
+        else {
+          power = 0x31;
+        }
       }
-    //}
-    
-    delay(100);
-    set_leds(state);
-    Serial.print(F("current state is ")); Serial.print(state < 0x10 ? " 0" : " "); Serial.println(state, HEX);
+    }
+    else {
+      Serial.println("Same UID, not writing anything");
+    }
 
-    // Dump the sector data
+    // Dump the sector data, good for debug
     //Serial.println(F("Current data in sector:"));
     //mfrc522.PICC_DumpMifareClassicSectorToSerial(&(mfrc522.uid), &key, sector);
     //Serial.println();
 
+    // close the connection with the RFID
     // Halt PICC
     mfrc522.PICC_HaltA();
     // Stop encryption on PCD
     mfrc522.PCD_StopCrypto1();
+
+    // visual indication for a successful operation
+    fill_solid(leds, NUM_LEDS, CHSV(0, 0, 64));
+    FastLED.show();
+       
+    Serial.print(F("current state is ")); Serial.print(state < 0x10 ? " 0" : " "); Serial.println(state, HEX);
+
+    // hold everything in place for some time
+    delay(200);
 }

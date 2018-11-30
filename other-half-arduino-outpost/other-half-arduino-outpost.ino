@@ -195,16 +195,16 @@ void loop() {
     //Serial.println();
 
     // Handle logic cases:
-    // if mission is already pre achieved, apply new_state with win state
-    // if not the same card as previous one but same power (color group) then WIN, encode chip with win
-    // new state does not achieve mission, apply new state.
+    // 1. if mission is already achieved, apply new_state with win state
+    // 2. if encoded with a mission AND not the same tag as previous one AND same power (color group) as previous tag THEN encode WIN
+    // 3. mission not achieved, display color.
     if (mission >= (WIN_STATE | VALID_STATE)) {
       Serial.println(F("mission PRE accomplished, applying state as new state with win state!"));
       state = new_state | WIN_STATE;
       master_state = Mission;
       winTime = millis();
     }
-    else if (!UIDcompare(prevReadCard,readCard, 4) && (prevPower == currPower)) {
+    else if (!UIDcompare(prevReadCard,readCard, 4) && (mission > VALID_STATE) && (prevPower == currPower)) {
       Serial.println(F("mission ACCOMPLISHED, writing completion bit!"));
       //copy read block to write block so we only change what we meant
       for (byte i = 0; i < 16; i++) {

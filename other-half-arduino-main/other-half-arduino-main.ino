@@ -239,7 +239,7 @@ void loop() {
         state = WIN_STATE;
       }
       else if (mission_command == DISPLAY_MISSION) {
-        Serial.println(F("mission valid but not complete, display power"));
+        Serial.println(F("mission not loaded or not complete, display power"));
         master_state = Mission;
         state = power;
       }
