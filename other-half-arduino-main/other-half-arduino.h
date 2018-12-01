@@ -2,6 +2,8 @@ void checkWinStatus() {
   if(millis() - winTime > winLengthMs)
   {
     state = state & ~(WIN_STATE);
+    master_state = Pattern;
+    power = 0;
   }
 }
 
@@ -40,19 +42,19 @@ void set_leds(byte state, LedsState master_state ) {
   // after special cases state can be checked for COLOR, PATTERN and NUMBER and set leds accordingly
   switch (state & COLOR_FIELD_MASK) {
     case 0x01 :
-      fill_solid(ledsCHSV, NUM_LEDS, CHSV(0 * 256 / 4, 255, 255));
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(0 * 256 / 5, 255, 255));
       break;
     case 0x02:
-      fill_solid(ledsCHSV, NUM_LEDS, CHSV(1 * 256 / 4, 255, 255));
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(1 * 256 / 5, 255, 255));
       break;
     case 0x03:
-      fill_solid(ledsCHSV, NUM_LEDS, CHSV(2 * 256 / 4, 255, 255));
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(2 * 256 / 5, 255, 255));
       break;
     case 0x04:
-      fill_solid(ledsCHSV, NUM_LEDS, CHSV(3 * 256 / 4, 255, 255));
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(3 * 256 / 5, 255, 255));
       break;
     case 0x05:
-      fill_solid(ledsCHSV, NUM_LEDS, CHSV(3 * 256 / 4, 255, 255));
+      fill_solid(ledsCHSV, NUM_LEDS, CHSV(4 * 256 / 5, 255, 255));
       break;
   }
 //  switch ( (state & MOTION_FIELD_MASK) >> 4) {
@@ -233,8 +235,18 @@ bool write_and_verify(byte blockAddr, byte dataBlock[], byte buffer[], byte size
         return true;
     } else {
         Serial.println(F("Failure, no match :-("));
-        //Serial.println(F("  perhaps the write didn't work properly..."));
+        Serial.println(F("  perhaps the write didn't work properly..."));
         Serial.println();
         return false;
     }
 }
+
+bool UIDcompare (unsigned int prevUID[], unsigned int currUID[], int UIDLen) {
+    for (int i = 0; i < UIDLen; i++) {
+        if (prevUID[i] != currUID[i])
+            return false;
+    }
+    return true;
+}
+
+

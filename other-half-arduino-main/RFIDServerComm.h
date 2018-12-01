@@ -53,6 +53,7 @@ class RFIDServerComm {
       return true;
     }
 
+    Serial.println("stopping before connect");
     client.stop();
     if (client.connect(ipAddr, 5007)) {
       Serial.println("successfully connected to the RFID server");
