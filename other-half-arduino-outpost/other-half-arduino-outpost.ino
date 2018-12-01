@@ -60,8 +60,8 @@ byte buffer[18];
 byte size = sizeof(buffer);
 bool read_success, write_success, auth_success;
 
-#define INITIAL_COLOR 0x2
-#define INITIAL_PATTERN 0x2
+#define INITIAL_COLOR 0x0
+#define INITIAL_PATTERN 0x0
 #define INITIAL_NUMBER 0x3
 
 byte state = INITIAL_COLOR << 0 | INITIAL_PATTERN << 2 | INITIAL_NUMBER << 4;
