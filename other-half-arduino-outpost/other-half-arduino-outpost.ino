@@ -97,7 +97,7 @@ void setup() {
 
 
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-    FastLED.setBrightness(32);
+    FastLED.setBrightness(64);
 
     state = state | VALID_STATE;
 }
