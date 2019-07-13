@@ -79,7 +79,7 @@ class RFIDServerComm {
     byte buf[MSG_LENGTH];
     buf[0] = TAG_INFO_MSG;
     for(int i=1; i<5; i++)
-      buf[i] = (byte)readCard[i];
+      buf[i] = (byte)readCard[i-1];
     buf[5] = mission;
     buf[6] = power;
     buf[7] = power_mask;
